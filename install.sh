@@ -32,6 +32,9 @@ step "第 1 步 / 共 5 步：检查你的电脑"
 [ "$(uname)" = "Darwin" ] || oops "这个版本目前只支持苹果 Mac 电脑。"
 ARCH=$(uname -m)
 [ "$ARCH" = "arm64" ] && ok "苹果芯片 Mac，很适合" || warn "你的是 Intel 芯片 Mac，也能用，但本地模型会慢一些"
+OSVER=$(sw_vers -productVersion 2>/dev/null | cut -d. -f1)
+if [ "${OSVER:-0}" -ge 14 ] 2>/dev/null; then ok "系统版本 $(sw_vers -productVersion 2>/dev/null) 满足要求"
+else oops "你的 macOS 版本偏低（本地思考核心需要 macOS 14 Sonoma 或更新）。请在 苹果菜单 → 关于本机 看一下版本，升级系统后再来。"; fi
 command -v curl >/dev/null || oops "系统缺 curl（很少见），请联系技术伙伴。"
 
 # ── 1. 命令行工具（git）──────────────────────────────────
@@ -56,17 +59,18 @@ else
     ok "Ollama 已安装，正在启动"
   else
     info "正在自动安装 Ollama（让你的大脑在本地思考、资料不外传）"
-    if command -v brew >/dev/null 2>&1; then
-      brew install ollama >/dev/null 2>&1 && ok "Ollama 装好了（通过 Homebrew）" || warn "Homebrew 安装没成，改用官方安装包"
+    # 官方一行脚本最稳（macOS 14+ 官方支持）→ 不成再 brew → 再官方安装包兜底
+    curl -fsSL https://ollama.com/install.sh 2>/dev/null | sh >/dev/null 2>&1 || true
+    command -v ollama >/dev/null 2>&1 && ok "Ollama 装好了（官方脚本）"
+    if ! command -v ollama >/dev/null 2>&1 && command -v brew >/dev/null 2>&1; then
+      brew install ollama >/dev/null 2>&1 && ok "Ollama 装好了（Homebrew）" || true
     fi
-    if ! command -v ollama >/dev/null 2>&1; then
-      TMP=$(mktemp -d); info "正在下载 Ollama 官方安装包……"
+    if ! command -v ollama >/dev/null 2>&1 && [ ! -d /Applications/Ollama.app ]; then
+      TMP=$(mktemp -d); info "改用官方安装包（多下一会儿）……"
       if curl -fsSL -o "$TMP/Ollama.dmg" "https://ollama.com/download/Ollama.dmg" 2>/dev/null; then
         MP=$(hdiutil attach "$TMP/Ollama.dmg" -nobrowse -quiet | grep -o '/Volumes/.*' | head -1)
-        [ -d "$MP/Ollama.app" ] && { cp -R "$MP/Ollama.app" /Applications/ && ok "Ollama 装好了"; } || warn "自动装 Ollama 没成"
+        [ -d "$MP/Ollama.app" ] && { cp -R "$MP/Ollama.app" /Applications/ && ok "Ollama 装好了"; }
         hdiutil detach "$MP" -quiet 2>/dev/null || true; rm -rf "$TMP"
-      else
-        warn "下载 Ollama 没成（可能网络问题）"
       fi
     fi
     command -v ollama >/dev/null 2>&1 || [ -d /Applications/Ollama.app ] || oops "没能自动装好 Ollama。请去 ollama.com 手动下载安装（双击拖进"应用程序"即可），然后把开头那行命令再粘一次。"
@@ -105,5 +109,9 @@ cat <<'DONE'
   ╰──────────────────────────────────────────────╯
 DONE
 printf '  %s怎么检查它好不好：%s在终端输入 %syos status%s，看到一排绿色的勾就对了。\n' "$B" "$N" "$C" "$N"
-printf '  %s怎么开始用它：%s翻开这份指南 —— %shttps://moonstachain.github.io/yuanli-os-quickstart/%s\n' "$B" "$N" "$C" "$N"
+printf '\n  %s你的专属空间已经建好了：%s~/我的大脑%s（私密，只有你能查，不上云）。\n' "$B" "$C" "$N"
+printf '  %s记你的第一条判断，就一句：%s\n' "$D" "$N"
+printf '    %sgbrain capture "刚见的客户我的判断是……" --source personal%s\n' "$C" "$N"
+printf '  %s之后想查，也一句：%sgbrain query "客户" --source-id personal%s\n' "$D" "$C" "$N"
+printf '\n  %s怎么用起来的完整指南：%s%shttps://moonstachain.github.io/yuanli-os-quickstart/%s\n' "$B" "$N" "$C" "$N"
 printf '  %s从"喂它第一条关于你最近一个重要客户的判断"开始，一周后你就懂它的价值了。%s\n\n' "$D" "$N"
