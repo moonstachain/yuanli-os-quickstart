@@ -90,6 +90,7 @@ curl -fsSL https://raw.githubusercontent.com/moonstachain/yuanli-os-quickstart/m
 
 ## 前提 & 说明（技术备注）
 
-- 需要 **codex CLI v0.130+**（脚本会先检测）。
+- 需要 **codex CLI v0.130+**（脚本会先检测）。⚠️ **v0.130 是硬红线**：≤v0.129 不支持 HTTP MCP，会降级成 stdio，多会话抢 PGLite 锁会卡——升级到 v0.130+ 再装。
 - 接入走 HTTP MCP（`http://127.0.0.1:3131/mcp` + bearer token），复用装机时起的常驻大脑服务。token 是长效全权凭证，只存在你本机 shell env、绝不入任何仓库。
+- **接入没生效排查**：重开会话后若工具面板里**仍没有 gbrain 工具**，手动把 MCP 指向本机 `http://127.0.0.1:3131/mcp`（bearer token 用环境变量 `GBRAIN_REMOTE_TOKEN`），再重开一次会话。（同事实测 2026-07-08 踩过：面板初期未暴露 gbrain，手动指本机 MCP 地址后即通。）
 - 这套目前还需要"重开会话生效""对 Codex 说话来记查"——我们正在做**打开 App 就能直接说的更傻瓜版本**，很快见。
